@@ -11,15 +11,16 @@ try:
     from rich.panel import Panel
     from rich.prompt import Prompt
     from rich.syntax import Syntax
+    from dotenv import load_dotenv
 except ImportError:
-    print("Lütfen gerekli kütüphaneleri yükleyin: pip install rich requests")
+    print("Lütfen gerekli kütüphaneleri yükleyin: pip install rich requests python-dotenv")
     exit(1)
 
+# .env dosyasından anahtarları yükle
+load_dotenv()
+
 # --- KONFİGÜRASYON ---
-# API anahtarını GitHub sızıntı taramasına takılmaması için ikiye böldük
-_KEY_P1 = "sk-or-v1-5be21b8b129a9d677d2b17c"
-_KEY_P2 = "86c0b023e817548b715175a7f23acd67fa42ced6d"
-OPENROUTER_API_KEY = _KEY_P1 + _KEY_P2
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 PLANNER_MODEL = "nousresearch/hermes-3-llama-3.1-405b:free"
