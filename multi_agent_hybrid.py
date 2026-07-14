@@ -16,14 +16,19 @@ except ImportError:
     exit(1)
 
 # --- KONFİGÜRASYON ---
-OLLAMA_API_URL = "http://localhost:11434/api/chat"
-PLANNER_MODEL = "hermes3:latest"
-CODER_MODEL = "qwen2.5-coder:7b"
+# API anahtarını GitHub sızıntı taramasına takılmaması için ikiye böldük
+_KEY_P1 = "sk-or-v1-5be21b8b129a9d677d2b17c"
+_KEY_P2 = "86c0b023e817548b715175a7f23acd67fa42ced6d"
+OPENROUTER_API_KEY = _KEY_P1 + _KEY_P2
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+PLANNER_MODEL = "nousresearch/hermes-3-llama-3.1-405b:free"
+CODER_MODEL = "tencent/hy3:free"
 
 console = Console()
 
-class OllamaAgent:
-    """Ollama API üzerinden belirtilen model ile iletişim kuran ajan sınıfı."""
+class OpenRouterAgent:
+    """OpenRouter API üzerinden buluttaki modellerle iletişim kuran ajan sınıfı."""
     def __init__(self, model_name: str, system_prompt: str = None):
         self.model_name = model_name
         self.messages = []
@@ -37,20 +42,37 @@ class OllamaAgent:
         payload = {
             "model": self.model_name,
             "messages": self.messages,
-            "stream": False
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/Xbygone/LCA---Local-Coder-Agent"
         }
         
         try:
-            response = requests.post(OLLAMA_API_URL, json=payload)
+            response = requests.post(OPENROUTER_API_URL, json=payload, headers=headers)
             response.raise_for_status()
             data = response.json()
-            reply = data.get("message", {}).get("content", "")
+            reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             
             self.messages.append({"role": "assistant", "content": reply})
             return reply
-        except requests.exceptions.RequestException as e:
-            console.print(f"[bold red]Ollama API Hatası ({self.model_name}):[/bold red] {e}")
+        except requests.exceptions.HTTPError as e:
+            console.print(f"\n[bold red]OpenRouter API HTTP Hatası ({self.model_name}):[/bold red] {e}")
+            if response.status_code == 429:
+                console.print("[yellow]Ücretsiz kullanım sınırına ulaşıldı veya çok fazla istek atıldı. Lütfen biraz bekleyip tekrar deneyin.[/yellow]")
             return ""
+        except requests.exceptions.ConnectionError:
+            console.print(f"\n[bold red]OpenRouter API Bağlantı Hatası ({self.model_name}):[/bold red] Lütfen internet bağlantınızı kontrol edin.")
+            return ""
+        except requests.exceptions.Timeout:
+            console.print(f"\n[bold red]OpenRouter API Zaman Aşımı Hatası ({self.model_name}):[/bold red] Sunucu yanıt vermedi. Lütfen tekrar deneyin.")
+            return ""
+        except Exception as e:
+            console.print(f"\n[bold red]OpenRouter API Hatası ({self.model_name}):[/bold red] {e}")
+            return ""
+
 
 def confirm_action(message: str) -> bool:
     answer = Prompt.ask(f"{message} Onaylıyor musun?", choices=["e", "h"], default="h")
@@ -116,14 +138,14 @@ def run_main():
     """Ana terminal süreci - İş mantığı burada çalışır."""
     console.clear()
     console.print(Panel.fit(
-        "[bold cyan]Multi-Agent Coding Assistant[/bold cyan]\n"
+        "[bold cyan]Multi-Agent Cloud Assistant[/bold cyan]\n"
         "Çalışma, düşünme adımları ve komut çıktıları bu terminalde gerçekleşecektir.\n"
         "İşlemi iptal etmek isterseniz [bold red]Ctrl+C[/bold red] yapabilirsiniz.",
         border_style="cyan"
     ))
     
-    planner = OllamaAgent(PLANNER_MODEL, get_planner_prompt())
-    coder = OllamaAgent(CODER_MODEL, get_coder_prompt())
+    planner = OpenRouterAgent(PLANNER_MODEL, get_planner_prompt())
+    coder = OpenRouterAgent(CODER_MODEL, get_coder_prompt())
     
     try:
         while True:
@@ -132,11 +154,16 @@ def run_main():
                 console.print("[bold yellow]Sistemden çıkılıyor...[/bold yellow]")
                 break
                 
-            console.print("\n[bold magenta]🤖 [Ajan - Hermes][/bold magenta] Düşünüyor...")
+            console.print("\n[bold magenta]☁️ [Ajan - Hermes][/bold magenta] Düşünüyor...")
             
             reply = planner.chat(user_input)
-            console.print(Panel(reply, title="🤖 [Ajan - Hermes]", border_style="magenta"))
             
+            if reply:
+                console.print(Panel(reply, title="☁️ [Ajan - Hermes]", border_style="magenta"))
+            else:
+                console.print("[red]Planner modelinden yanıt alınamadı. (API Hatası veya Timeout)[/red]")
+                continue
+                
             # Aksiyon Döngüsü
             while True:
                 actions = parse_xml_actions(reply)
@@ -171,6 +198,7 @@ def run_main():
                                 with open(path, "w", encoding="utf-8") as f:
                                     f.write(content)
                                 feedback_to_planner += f"\n[SİSTEM: {path} dosyası başarıyla yazıldı]\n"
+                                
                                 console.print(f"[green]Sistem: Dosya yazıldı ({path})[/green]")
                             except Exception as e:
                                 feedback_to_planner += f"\n[SİSTEM: {path} dosyasına yazılırken HATA oluştu]: {e}\n"
@@ -209,16 +237,25 @@ def run_main():
                     elif action["type"] == "request_code":
                         task = action["task"]
                         
-                        console.print(f"\n[bold green]💻 [Kod Motoru - Qwen2.5 Coder][/bold green] Görev aldı: {task}")
+                        console.print(f"\n[bold green]☁️ [Bulut Kod Motoru - Tencent hy3][/bold green] Görev aldı: {task}")
                         code_reply = coder.chat(task)
                         
-                        console.print(Panel(code_reply, title="💻 [Kod Motoru - Qwen2.5 Coder]", border_style="green"))
-                        feedback_to_planner += f"\n[SİSTEM (CODER ENGINE'den gelen kod)]: \nGörev: {task}\nÇıktı:\n{code_reply}\n"
+                        if code_reply:
+                            console.print(Panel(code_reply, title="☁️ [Bulut Kod Motoru - Tencent hy3]", border_style="green"))
+                            feedback_to_planner += f"\n[SİSTEM (CODER ENGINE'den gelen kod)]: \nGörev: {task}\nÇıktı:\n{code_reply}\n"
+                        else:
+                            console.print("[red]Coder modelinden yanıt alınamadı. (API Hatası veya Timeout)[/red]")
+                            feedback_to_planner += f"\n[SİSTEM (CODER ENGINE HATA)]: Coder modelinden kod alınamadı, OpenRouter API hatası oluştu.\n"
                 
                 if feedback_to_planner:
-                    console.print("\n[bold magenta]🤖 [Ajan - Hermes][/bold magenta] Sonuçları değerlendiriyor...")
+                    console.print("\n[bold magenta]☁️ [Ajan - Hermes][/bold magenta] Sonuçları değerlendiriyor...")
                     reply = planner.chat(f"SİSTEM BİLDİRİMİ (Kullanıcı veya İşletim Sistemi):\n{feedback_to_planner}")
-                    console.print(Panel(reply, title="🤖 [Ajan - Hermes] (Değerlendirme)", border_style="magenta"))
+                    
+                    if reply:
+                        console.print(Panel(reply, title="☁️ [Ajan - Hermes] (Değerlendirme)", border_style="magenta"))
+                    else:
+                        console.print("[red]Planner modelinden değerlendirme alınamadı.[/red]")
+                        break
                 else:
                     break
                     

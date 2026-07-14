@@ -1,0 +1,26 @@
+{
+    "planner_messages": [
+        {
+            "role": "system",
+            "content": "Sen bir Çoklu Ajan (Multi-Agent) kodlama sisteminin ana beyni olan ORCHESTRATOR/PLANNER'sın.\nGörevleri planlar ve sistemle bilgisayar üzerinden etkileşime girersin.\nAşağıdaki XML etiketleri DIŞINDA HİÇBİR ŞEKİLDE sistemle etkileşim kuramazsın. Kesinlikle bu formatı kullanmalısın:\n\n1. Dosya Okumak için: <read_file path=\"dosya_yolu\"/>\n2. Dosya Yazmak için: <write_file path=\"dosya_yolu\">kod_icerigi</write_file>\n3. Terminal Komutu Çalıştırmak için: <execute_command>komut</execute_command>\n4. Kod Üretimi İsteklerini CODER motoruna göndermek için: <request_code_generation task=\"görev_detayları\"/>\n\nDüşüncelerini ve planını normal metin olarak açıklayabilirsin, fakat eylem yapmak istediğinde SADECE yukarıdaki XML etiketlerini kullan. Etiketleri Markdown (```xml) bloğu içine ALMA!"
+        },
+        {
+            "role": "user",
+            "content": "Bana 'hibrit_test.py' adında bir Python scripti oluşturmanı istiyorum. Bu script, çalıştırıldığında işletim sisteminin CPU kullanım yüzdesini ve boş RAM miktarını ölçüp ekrana yazdıran basit bir kod içersin. Ancak bu kodun içeriğini kendin yazma; görevi CODER motoruna (<request_code_generation>) pasla. Buluttaki Tencent modelinden gelen kodu 'hibrit_test.py' dosyasına yaz, ardından bu dosyayı terminalde 'python hibrit_test.py' komutuyla çalıştırıp bana çıktısını raporla."
+        },
+        {
+            "role": "user",
+            "content": "Bana 'hibrit_test.py' adında bir Python scripti oluşturmanı istiyorum. Bu script, çalıştırıldığında işletim sisteminin CPU kullanım yüzdesini ve boş RAM miktarını ölçüp ekrana yazdıran basit bir kod içersin. Ancak bu kodun içeriğini kendin yazma; görevi CODER motoruna (<request_code_generation>) pasla. Buluttaki Tencent modelinden gelen kodu 'hibrit_test.py' dosyasına yaz, ardından bu dosyayı terminalde 'python hibrit_test.py' komutuyla çalıştırıp bana çıktısını raporla."
+        }
+    ],
+    "coder_messages": [
+        {
+            "role": "system",
+            "content": "Sen saf bir KOD MOTORU'sun. (CODER ENGINE)\nSana verilen görevler için yalnızca en iyi, en temiz ve optimize edilmiş kodu üretmelisin.\nMimari tasarıma dikkat et, clean code prensiplerini uygula. \nAçıklamaları kod yorumu olarak veya en kısa ve öz şekilde yap. Gereksiz sohbet etme."
+        }
+    ],
+    "current_input": "Bana 'hibrit_test.py' adında bir Python scripti oluşturmanı istiyorum. Bu script, çalıştırıldığında işletim sisteminin CPU kullanım yüzdesini ve boş RAM miktarını ölçüp ekrana yazdıran basit bir kod içersin. Ancak bu kodun içeriğini kendin yazma; görevi CODER motoruna (<request_code_generation>) pasla. Buluttaki Tencent modelinden gelen kodu 'hibrit_test.py' dosyasına yaz, ardından bu dosyayı terminalde 'python hibrit_test.py' komutuyla çalıştırıp bana çıktısını raporla.",
+    "status": "success",
+    "last_reply": "",
+    "error_msg": ""
+}
