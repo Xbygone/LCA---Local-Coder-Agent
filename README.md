@@ -1,47 +1,95 @@
-# Multi-Agent Coding Assistant
+# 🤖 Local Coder Agent (LCA)
 
-Bu proje, yerel makinenizde çalışan ve Ollama üzerinden gücünü alan iki farklı yapay zeka modelinin (Hermes ve Qwen) senkronize çalışarak kodlama görevlerini yerine getirmesini sağlayan, tamamen otonom bir asistan sistemidir.
+Bilgisayarınızda **%100 yerel** olarak çalışan, Ollama tabanlı çoklu ajan (Multi-Agent) kodlama asistanı.
+
+## Mimari
+
+| Ajan | Model | Rol |
+|------|-------|-----|
+| **Planner / Orchestrator** | `hermes3:latest` | Ana beyin. Plan yapar, araçları çağırır, sistemi yönetir. Asla uzun kod yazmaz. |
+| **Coder Engine** | `qwen2.5-coder:7b` | Saf kod motoru. Sadece kod üretir — sıfır sohbet. |
 
 ## 🚀 Özellikler
 
-- **Hermes3 (Planner/Orchestrator)**: Sistem yöneticisi. Kullanıcıyla etkileşime girer, plan yapar ve sistemi yönetir. Sadece XML formatında komutlar üretir.
-- **Qwen3.5 (Coder Engine)**: Sadece kod yazımına odaklanmış kod motoru. Hermes'in gönderdiği task'ları alır ve optimum kalitede kod üretir.
-- **XML Tabanlı İşletim**: Güvenlik ve yapısal bütünlük için sistem eylemleri sıkı XML etiketleriyle yönetilir.
-- **Güvenli Dosya ve Terminal Erişimi**: Dosya yazma veya komut çalıştırma gibi kritik eylemler öncesinde kullanıcı onayı (`e/h`) istenir. Onaysız hiçbir işlem yapılamaz.
-- **Otomatik Hata Kurtarma**: Çalıştırılan komutlarda bir hata olursa (`stderr`), bu hata mesajı otomatik olarak Hermes'e geri beslenir, böylece model hatayı kendi kendine analiz edip düzeltebilir.
-- **Zengin Konsol Deneyimi**: `rich` kütüphanesi kullanılarak tasarlanmış, okunabilirliği yüksek renkli terminal arayüzü.
+- **XML Tabanlı Araç Çağrısı**: Dosya okuma/yazma, terminal komutları ve kod üretimi istekleri sıkı XML etiketleriyle yönetilir.
+- **Güvenli Dosya ve Terminal Erişimi**: Kritik eylemler öncesinde kullanıcı onayı (`e/h`) istenir. Onaysız işlem yapılamaz.
+- **Sliding Window Context**: Konuşma geçmişi otomatik kırpılır — uzun oturumlarda performans çökmesi olmaz.
+- **Anti-Loop Koruması**: Reddedilen aksiyonlar takip edilir, aynı hata tekrar denenmez. Maksimum döngü limiti (15 round) uygulanır.
+- **Ollama Sağlık Kontrolü**: Başlangıçta Ollama bağlantısı ve model yükleme durumu otomatik kontrol edilir.
+- **Oturum Kaydetme**: Konuşma geçmişi JSON formatında `sessions/` dizinine kaydedilir. Çıkışta otomatik kayıt.
+- **Timeout Yönetimi**: Ollama API (5dk) ve terminal komutları (2dk) için timeout sınırları uygulanır.
+- **Güvenlik**: Sistem dizinlerine (Windows/Program Files, /etc, /usr) erişim otomatik engellenir. Path traversal koruması aktif.
+- **Zengin Terminal Arayüzü**: `rich` kütüphanesi ile renkli, okunabilir konsol çıktısı ve spinner animasyonları.
 
 ## 🛠️ Kurulum
 
-1. **Gereksinimler:**
-   - Python 3.8+
-   - [Ollama](https://ollama.com) kurulu ve arka planda çalışıyor olmalıdır.
+### Gereksinimler
+- Python 3.8+
+- [Ollama](https://ollama.com) kurulu ve çalışıyor
 
-2. **Gerekli Kütüphaneler:**
-   ```bash
-   pip install rich requests
-   ```
+### Kütüphaneler
+```bash
+pip install rich requests
+```
 
-3. **Modelleri İndirin:**
-   Ollama üzerinden aşağıdaki modellerin indirilmiş olduğundan emin olun:
-   ```bash
-   ollama run hermes3:latest
-   ollama run qwen3.5:9b
-   ```
+### Modeller
+```bash
+ollama pull hermes3:latest
+ollama pull qwen2.5-coder:7b
+```
 
 ## 🎮 Kullanım
 
-Projeyi çalıştırmak için aşağıdaki komutu girin:
-
+### Hızlı Başlangıç
 ```bash
 python multi_agent_assistant.py
 ```
+Veya Windows'ta çift tıklayarak: `run_assistant.bat`
 
-Sistem başlatıldığında `Kullanıcı` girişi istenir. İstediğiniz kodlama veya görev senaryosunu doğal bir dille yazabilirsiniz. Ajanlar kendi aralarında paslaşarak görevi tamamlayacaktır. Çıkmak için `exit`, `quit` veya `cikis` yazabilirsiniz.
+### Terminal Komutları
+| Komut | Açıklama |
+|-------|----------|
+| `exit` / `quit` / `cikis` | Oturumu kaydedip çıkar |
+| `save` | Oturumu anında kaydeder |
+| `sessions` | Kayıtlı oturumları listeler |
+| `Ctrl+C` | Acil durdurma (otomatik kayıt) |
 
-## ⚙️ Desteklenen XML Etiketleri (Sistem İçin)
+## ⚙️ XML Etiketleri (Sistem İçin)
 
-- Dosya okumak: `<read_file path="dosya_yolu"/>`
-- Dosya yazmak: `<write_file path="dosya_yolu">kod</write_file>`
-- Terminal komutu çalıştırmak: `<execute_command>komut</execute_command>`
-- Kod Motoruna görev göndermek: `<request_code_generation task="görev_detayı"/>`
+```xml
+<!-- Dosya okuma -->
+<read_file path="dosya_yolu"/>
+
+<!-- Dosya yazma -->
+<write_file path="dosya_yolu">kod_icerigi</write_file>
+
+<!-- Terminal komutu -->
+<execute_command>komut</execute_command>
+
+<!-- Kod motoru görevi (opsiyonel context) -->
+<request_code_generation task="görev" context="mevcut kod bağlamı"/>
+```
+
+## 📁 Dosya Yapısı
+
+```
+LCA - Local Coder Agent/
+├── multi_agent_assistant.py   # Ana uygulama
+├── run_assistant.bat           # Windows tek-tık başlatıcı
+├── requirements.txt            # Python bağımlılıkları
+├── sessions/                   # Oturum kayıtları (otomatik oluşur)
+│   └── session_YYYYMMDD_HHMMSS.json
+└── README.md
+```
+
+## 🔒 Güvenlik
+
+- Tüm dosya yazma ve komut çalıştırma işlemleri kullanıcı onayına tabidir.
+- Sistem dizinlerine erişim otomatik engellenir.
+- Path traversal saldırılarına karşı yollar normalize edilir (`os.path.realpath`).
+- API anahtarı veya bulut bağlantısı yoktur — tamamen yerel çalışır.
+- `shell=True` kullanımı gereklidir (doğal dil komutları için) ancak kullanıcı onay mekanizması ile korunur.
+
+## 📜 Lisans
+
+MIT
